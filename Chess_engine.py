@@ -15,6 +15,7 @@ class GameState():
             ["wP" ,"wP", "wP", "wP", "wP", "wP", "wP", "wP"],
             ["wR", "wN", "wB", "wQ", "wK", "wB", "wN", "wR"],
         ]
+        self.moveFunctions= {'P': self.getPawnMoves, 'R': self.getRockMoves, 'N': self.getKnightMoves, 'B': self.getBishopMoves, 'Q': self.getQueenMoves, 'K': self.getKingMoves}
         self.white_to_move = True
         self.move_log = []
 
@@ -46,15 +47,46 @@ class GameState():
                 turn = self.board[r][c][0]
                 if(turn == 'w' and self.white_to_move) or (turn == 'b' and not self.white_to_move):
                     piece = self.board[r][c][1]
-                    if piece == 'p':
-                        self.getPawnMove(r,c,moves)
-                    if piece == 'R':
-                        self.getRockMove(r,c,moves)
+                    self.moveFunctions[piece](r, c, moves) # calls the appropriate move function base on piece type
         return moves
-    def getPawnMove(self,r,c,moves):
+
+    def getPawnMoves(self,r,c,moves):
+        if self.white_to_move:
+            if self.board[r-1][c] == "--": #1 square pawn advance
+                moves.append(Move((r,c), (r-1, c), self.board))
+                if r == 6 and self.board[r-2][c] == "--": #2 square pawn advencd
+                    moves.append(Move((r,c), (r-2, c), self.board))
+            if c-1 >= 0:
+                if self.board[r-1][c-1][0] == 'b': #opponent piece capture
+                    moves.append(Move((r, c), (r-1, c-1), self.board))
+            if c+1 <= 7: #capture to the right
+                if self.board[r-1][c+1][0] == 'b': #opponent piece capture
+                    moves.append(Move((r, c), (r - 1, c + 1), self.board))
+        else: #black pawn moves
+            if self.board[r + 1][c] == "--":  # 1 square pawn advance
+                moves.append(Move((r, c), (r + 1, c), self.board))
+                if r == 1 and self.board[r + 2][c] == "--":  # 2 square pawn advencd
+                    moves.append(Move((r, c), (r + 2, c), self.board))
+            # capture to left
+            if c - 1 >= 0:
+                if self.board[r + 1][c - 1][0] == 'w':  # opponent piece capture
+                    moves.append(Move((r, c), (r + 1, c - 1), self.board))
+            if c + 1 <= 7:  # capture to the right
+                if self.board[r + 1][c + 1][0] == 'w':  # opponent piece capture
+                    moves.append(Move((r, c), (r + 1, c + 1), self.board))
+    def getRockMoves(self,r,c,moves):
         pass
 
-    def getRockMove(self,r,c,moves):
+    def getKnightMoves(self,r,c,moves):
+        pass
+
+    def getBishopMoves(self,r,c,moves):
+        pass
+
+    def getKingMoves(self,r,c,moves):
+        pass
+
+    def getQueenMoves(self,r,c,moves):
         pass
 
 class Move():

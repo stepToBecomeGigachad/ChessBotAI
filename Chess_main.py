@@ -6,7 +6,7 @@ from pygame.examples.moveit import HEIGHT
 
 from Chess import Chess_engine
 
-WIDTH = HEIGHT = 512 # You can choose 400 for another option
+WIDTH = HEIGHT = 512
 DIMENSION = 8 # dimensions of a chess board is 8x8
 SQ_SIZE = HEIGHT  //DIMENSION
 MAX_FPS = 15 # Setting for animations
@@ -80,11 +80,27 @@ def draw_game_state(screen,gs):
     draw_pieces(screen,gs.board) # draw pieces on top of those squares
 
 def draw_board(screen):
-    colors = [p.Color("white"), p.Color("dark green")]
+    colors = [p.Color("white"), p.Color("#B58863")]
     for r in range(DIMENSION):
         for c in range(DIMENSION):
             color = colors[((r+c)%2)]
             p.draw.rect(screen, color, p.Rect(c*SQ_SIZE, r*SQ_SIZE, SQ_SIZE, SQ_SIZE))
+
+    #Hiển thị hàng và cột
+    font = p.font.SysFont("Arial", 18, bold=True)
+    # Hiển thị các chữ cái A-H ở phía dưới bàn cờ
+    for c in range(DIMENSION):
+        bg_color = colors[(7 + c) % 2]  # Xác định màu ô ở hàng cuối (hàng số 1)
+        text_color = p.Color("white") if bg_color == p.Color("#B58863") else p.Color("#B58863")
+        label = font.render(chr(97 + c), True, text_color)  # Chữ a-h
+        screen.blit(label, (c * SQ_SIZE + SQ_SIZE -9, HEIGHT - 18))  # Góc dưới phải mỗi ô
+
+        # Hiển thị các số 1-8 ở góc dưới bên phải mỗi ô cột bên phải
+    for r in range(DIMENSION):
+        bg_color = colors[(r) % 2]  # Xác định màu ô ở cột bên trái
+        text_color = p.Color("white") if bg_color == p.Color("#B58863") else p.Color("#B58863")
+        label = font.render(str(8 - r), True, text_color)  # Số 8-1
+        screen.blit(label, (4, r * SQ_SIZE + 4))
 
 def draw_pieces(screen,board):
     for r in range(DIMENSION):
