@@ -127,7 +127,7 @@ class GameState():
 
     def getQueenMoves(self, r, c, moves):
         self.getBishopMoves(r,c,moves)
-        self.getKnightMoves(r,c,moves)
+        self.getRockMoves(r,c,moves)
 
     def getKingMoves(self, r, c, moves):
         kingMoves = ((-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1))
