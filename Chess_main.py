@@ -4,7 +4,7 @@
 import pygame as p
 from pygame.examples.moveit import HEIGHT
 
-from Chess import Chess_engine
+import Chess_engine
 
 WIDTH = HEIGHT = 512
 DIMENSION = 8 # dimensions of a chess board is 8x8
@@ -54,11 +54,11 @@ def main():
                     square_selected =(row,col)
                     player_clicks.append(square_selected) # Append for both 1st and 2nd clicks
                 if len(player_clicks) == 2: # After 2 click
-                    move = Chess_engine.Move(player_clicks[0],player_clicks[1],gs.board)
-                    print(move.getChessNotation())
-                    if move in valid_moves:
-                        gs.makeMove(move)
-                        moveMade = True
+                    for valid_move in valid_moves:
+                        if player_clicks[0] == (valid_move.startRow, valid_move.startCol) and player_clicks[1] == (valid_move.endRow, valid_move.endCol):
+                            gs.makeMove(valid_move)
+                            moveMade = True
+                            break
                     square_selected = () #reset user click
                     player_clicks = []
             # Key handle
