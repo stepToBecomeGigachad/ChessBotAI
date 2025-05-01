@@ -20,8 +20,8 @@ class GameState():
         self.move_log = []
         self.white_king_location = (7, 4)
         self.black_king_location = (0, 4)
-        self.checkMate = False
-        self.staleMate = False
+        self.checkmate = False
+        self.stalemate = False
         self.in_check = False
         self.pins = []
         self.checks = []
@@ -30,7 +30,7 @@ class GameState():
                                                self.current_castling_rights.wqs, self.current_castling_rights.bqs)]
 
     def makeMove(self, move):
-        if self.checkMate:  # If in checkmate, don't allow any moves
+        if self.checkmate:  # If in checkmate, don't allow any moves
             return False
             
         self.board[move.startRow][move.startCol] = "--"
@@ -43,6 +43,14 @@ class GameState():
             self.white_king_location = (move.endRow, move.endCol)
         elif move.pieceMoved == "bK":
             self.black_king_location = (move.endRow, move.endCol)
+
+        # Check if king is captured (checkmate)
+        if move.pieceCaptured == "wK":
+            self.checkmate = True
+            self.white_to_move = True  # Set back to white's turn to show black wins
+        elif move.pieceCaptured == "bK":
+            self.checkmate = True
+            self.white_to_move = False  # Set back to black's turn to show white wins
             
         # castle move
         if move.isCastleMove:
@@ -65,15 +73,24 @@ class GameState():
             move = self.move_log.pop()
             self.board[move.startRow][move.startCol] = move.pieceMoved
             self.board[move.endRow][move.endCol] = move.pieceCaptured
-            self.white_to_move = not self.white_to_move #switch turns back
+            self.white_to_move = not self.white_to_move
             # update the king's position needed
             if move.pieceMoved == "wK":
-                self.white_king_location = (move.startRow, move.startRow)
+                self.white_king_location = (move.startRow, move.startCol)
             elif move.pieceMoved == "bK":
-                self.black_king_location = (move.startRow, move.startRow)
-        # undo castling rights
-        self.castle_rights_log.pop()
-        self.current_castling_rights = self.castle_rights_log[-1]
+                self.black_king_location = (move.startRow, move.startCol)
+            # undo castling rights
+            self.castle_rights_log.pop()
+            self.current_castling_rights = self.castle_rights_log[-1]
+            # --- BỔ SUNG XỬ LÝ UNDO NHẬP THÀNH ---
+            if move.isCastleMove:
+                if move.endCol - move.startCol == 2:  # king-side castle
+                    # Đưa xe về lại vị trí cũ
+                    self.board[move.endRow][move.endCol+1] = self.board[move.endRow][move.endCol-1]
+                    self.board[move.endRow][move.endCol-1] = "--"
+                else:  # queen-side castle
+                    self.board[move.endRow][move.endCol-2] = self.board[move.endRow][move.endCol+1]
+                    self.board[move.endRow][move.endCol+1] = "--"
 
     def updateCastleRights(self, move):
         if move.pieceMoved == "wK":
@@ -101,9 +118,6 @@ class GameState():
         """
         All moves considering checks.
         """
-        temp_castle_rights = CastleRights(self.current_castling_rights.wks, self.current_castling_rights.bks,
-                                          self.current_castling_rights.wqs, self.current_castling_rights.bqs)
-        # advanced algorithm
         moves = []
         self.in_check, self.pins, self.checks = self.checkForPinsAndChecks()
 
@@ -113,6 +127,12 @@ class GameState():
         else:
             king_row = self.black_king_location[0]
             king_col = self.black_king_location[1]
+
+        # If king is captured, it's checkmate
+        if self.board[king_row][king_col] == "--":
+            self.checkmate = True
+            return moves
+
         if self.in_check:
             if len(self.checks) == 1:  # only 1 check, block the check or move the king
                 moves = self.getAllPossibleMoves()
@@ -130,14 +150,12 @@ class GameState():
                         valid_square = (king_row + check[2] * i,
                                         king_col + check[3] * i)  # check[2] and check[3] are the check directions
                         valid_squares.append(valid_square)
-                        if valid_square[0] == check_row and valid_square[
-                            1] == check_col:  # once you get to piece and check
+                        if valid_square[0] == check_row and valid_square[1] == check_col:  # once you get to piece and check
                             break
                 # get rid of any moves that don't block check or move king
                 for i in range(len(moves) - 1, -1, -1):  # iterate through the list backwards when removing elements
-                    if moves[i].piece_moved[1] != "K":  # move doesn't move king so it must block or capture
-                        if not (moves[i].end_row,
-                                moves[i].end_col) in valid_squares:  # move doesn't block or capture piece
+                    if moves[i].pieceMoved[1] != "K":  # move doesn't move king so it must block or capture
+                        if not (moves[i].endRow, moves[i].endCol) in valid_squares:  # move doesn't block or capture piece
                             moves.remove(moves[i])
             else:  # double check, king has to move
                 self.getKingMoves(king_row, king_col, moves)
@@ -148,11 +166,13 @@ class GameState():
             else:
                 self.getCastleMoves(self.black_king_location[0], self.black_king_location[1], moves)
 
+        # Update checkmate and stalemate
         if len(moves) == 0:
-            if self.inCheck():
+            if self.in_check:
                 self.checkmate = True
+                self.stalemate = False
             else:
-                # TODO stalemate on repeated moves
+                self.checkmate = False
                 self.stalemate = True
         else:
             self.checkmate = False
@@ -221,11 +241,22 @@ class GameState():
             enemy_color = "w"
             king_row, king_col = self.black_king_location
 
+        # Forward move
         if 0 <= row + move_amount <= 7 and self.board[row + move_amount][col] == "--":  # 1 square pawn advance
             if not piece_pinned or pin_direction == (move_amount, 0):
                 moves.append(Move((row, col), (row + move_amount, col), self.board))
                 if row == start_row and 0 <= row + 2 * move_amount <= 7 and self.board[row + 2 * move_amount][col] == "--":  # 2 square pawn advance
                     moves.append(Move((row, col), (row + 2 * move_amount, col), self.board))
+        
+        # Diagonal captures
+        for d in [(-1, -1), (-1, 1)] if self.white_to_move else [(1, -1), (1, 1)]:
+            end_row = row + d[0]
+            end_col = col + d[1]
+            if 0 <= end_row <= 7 and 0 <= end_col <= 7:
+                if not piece_pinned or pin_direction == d:
+                    end_piece = self.board[end_row][end_col]
+                    if end_piece[0] == enemy_color:  # enemy piece to capture
+                        moves.append(Move((row, col), (end_row, end_col), self.board))
 
     def getRockMoves(self,r,c,moves):
         directions = ((-1,0),(0,-1),(1,0),(0,1)) # up, down ,left, right
