@@ -4,7 +4,7 @@
 import pygame as p
 from pygame.examples.moveit import HEIGHT
 
-import Chess_engine
+import Chess_engine, Chess_AI
 
 WIDTH = HEIGHT = 512
 DIMENSION = 8 # dimensions of a chess board is 8x8
@@ -41,12 +41,15 @@ def main():
     running = True
     square_selected = () # No square is selected, keep track of the last click of the user (tuple: (r,c))
     player_clicks = [] # Keep track of player click (two tuple: [(6,4), (4,4)]
+    player_one =  False
+    player_two = False
     while running:
+        human_turn = (gs.white_to_move and player_one) or (not gs.white_to_move and player_two) 
         for e in p.event.get():
             if e.type == p.QUIT:
                 running = False
             # Mouse handler
-            elif e.type == p.MOUSEBUTTONDOWN and not game_over:
+            elif e.type == p.MOUSEBUTTONDOWN and not game_over and human_turn:
                 location = p.mouse.get_pos() # Get (x,y) location
                 col = location[0] //SQ_SIZE
                 row = location[1] //SQ_SIZE
@@ -76,6 +79,11 @@ def main():
                     player_clicks = []
                     moveMade = False
                     game_over = False
+        #AI move finder
+        if  not game_over and not human_turn:
+            AI_move = Chess_AI.findRandomMoves(valid_moves)    
+            gs.makeMove(AI_move)
+            moveMade = True
 
         if moveMade:
             # animated_move(gs.move_log[-1], screen, gs.board, clock)
