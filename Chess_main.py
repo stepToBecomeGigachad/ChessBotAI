@@ -27,6 +27,25 @@ def load_images():
 
 # The main driver for our code. This will handle user input and updating the graphics.
 
+def draw_promotion_menu(screen, color, sq_size):
+    """
+    Hiển thị menu chọn quân phong cấp (Q, R, B, N) cho người chơi.
+    Trả về: [(rect, promoteTo), ...]
+    """
+    pieces = ['Q', 'R', 'B', 'N']
+    menu_rects = []
+    menu_x = WIDTH // 2 - sq_size // 2
+    menu_y = HEIGHT // 2 - 2 * sq_size
+    for i, piece in enumerate(pieces):
+        rect = p.Rect(menu_x, menu_y + i * sq_size, sq_size, sq_size)
+        p.draw.rect(screen, p.Color("lightgray"), rect)
+        p.draw.rect(screen, p.Color("black"), rect, 2)
+        img = IMAGES[color + piece]
+        screen.blit(img, rect)
+        menu_rects.append((rect, color + piece))
+    p.display.update()
+    return menu_rects
+
 def main():
     p.init()
     screen = p.display.set_mode((WIDTH, HEIGHT))
@@ -41,8 +60,8 @@ def main():
     running = True
     square_selected = () # No square is selected, keep track of the last click of the user (tuple: (r,c))
     player_clicks = [] # Keep track of player click (two tuple: [(6,4), (4,4)]
-    player_one =  False
-    player_two = False
+    player_one =  True  
+    player_two = True
     while running:
         human_turn = (gs.white_to_move and player_one) or (not gs.white_to_move and player_two) 
         for e in p.event.get():
@@ -60,11 +79,35 @@ def main():
                     square_selected =(row,col)
                     player_clicks.append(square_selected) # Append for both 1st and 2nd clicks
                 if len(player_clicks) == 2: # After 2 click
+                    move_to_make = None
                     for valid_move in valid_moves:
                         if player_clicks[0] == (valid_move.startRow, valid_move.startCol) and player_clicks[1] == (valid_move.endRow, valid_move.endCol):
-                            gs.makeMove(valid_move)
-                            moveMade = True
+                            move_to_make = valid_move
                             break
+                    if move_to_make:
+                        if move_to_make.isPawnPromotion:
+                            # Hiển thị menu chọn quân phong cấp
+                            color = move_to_make.pieceMoved[0]
+                            menu_rects = draw_promotion_menu(screen, color, SQ_SIZE)
+                            promoting = True
+                            promoteTo = None
+                            while promoting:
+                                for ev in p.event.get():
+                                    if ev.type == p.QUIT:
+                                        p.quit()
+                                        import sys
+                                        sys.exit()
+                                    if ev.type == p.MOUSEBUTTONDOWN:
+                                        mouse_pos = p.mouse.get_pos()
+                                        for rect, piece in menu_rects:
+                                            if rect.collidepoint(mouse_pos):
+                                                promoteTo = piece
+                                                promoting = False
+                                                break
+                                p.time.wait(10)
+                            move_to_make.promoteTo = promoteTo
+                        gs.makeMove(move_to_make)
+                        moveMade = True
                     square_selected = () #reset user click
                     player_clicks = []
             # Key handler
