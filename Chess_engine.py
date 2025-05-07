@@ -84,39 +84,57 @@ class GameState():
         
         #pawn promotion
         if move.isPawnPromotion:
-            promoted_piece = move.promoteTo if hasattr(move, "promoteTo") and move.promoteTo else ("wQ" if self.white_to_move else "bQ")
-            self.board[move.endRow][move.endCol] = promoted_piece
+            # Chỉ phong cấp nếu là tốt và đi đến hàng cuối
+            if (move.pieceMoved == "wP" and move.endRow == 0) or (move.pieceMoved == "bP" and move.endRow == 7):
+                promoted_piece = move.promoteTo if hasattr(move, "promoteTo") and move.promoteTo else ("wQ" if self.white_to_move else "bQ")
+                self.board[move.endRow][move.endCol] = promoted_piece
 
     # Undo the last move
     def undoMove(self):
-        if len(self.move_log) != 0:
+        """
+        Undo the last move
+        """
+        if len(self.move_log) != 0:  # make sure that there is a move to undo
             move = self.move_log.pop()
             self.board[move.startRow][move.startCol] = move.pieceMoved
             self.board[move.endRow][move.endCol] = move.pieceCaptured
-            self.white_to_move = not self.white_to_move
-            # update the king's position needed
+            self.white_to_move = not self.white_to_move  # swap players
+            
+            # update the king's position if needed
             if move.pieceMoved == "wK":
                 self.white_king_location = (move.startRow, move.startCol)
             elif move.pieceMoved == "bK":
                 self.black_king_location = (move.startRow, move.startCol)
-            # undo castling rights
-            self.castle_rights_log.pop()
-            self.current_castling_rights = self.castle_rights_log[-1]
-            # --- BỔ SUNG XỬ LÝ UNDO NHẬP THÀNH ---
-            if move.isCastleMove:
-                if move.endCol - move.startCol == 2:  # king-side castle
-                    # Đưa xe về lại vị trí cũ
-                    self.board[move.endRow][move.endCol+1] = self.board[move.endRow][move.endCol-1]
-                    self.board[move.endRow][move.endCol-1] = "--"
-                else:  # queen-side castle
-                    self.board[move.endRow][move.endCol-2] = self.board[move.endRow][move.endCol+1]
-                    self.board[move.endRow][move.endCol+1] = "--"
-            # hoàn tác en passant
+            
+            # undo en passant move
+            if move.isEnpassantMove:
+                self.board[move.endRow][move.endCol] = "--"  # leave landing square blank
+                self.board[move.startRow][move.endCol] = move.pieceCaptured  # restore captured pawn
+            
+            # undo pawn promotion
             if move.isPawnPromotion:
-                self.board[move.endRow][move.endCol] = "--"
-                self.board[move.startRow][move.endCol] = move.pieceCaptured
+                self.board[move.startRow][move.endCol] = move.pieceCaptured  # restore original pawn
+            
+            # undo castle move
+            if move.isCastleMove:
+                if move.endCol - move.startCol == 2:  # king-side
+                    self.board[move.endRow][move.endCol + 1] = self.board[move.endRow][move.endCol - 1]
+                    self.board[move.endRow][move.endCol - 1] = "--"
+                else:  # queen-side
+                    self.board[move.endRow][move.endCol - 2] = self.board[move.endRow][move.endCol + 1]
+                    self.board[move.endRow][move.endCol + 1] = "--"
+            
+            # restore en passant possible
             self.en_passant_log.pop()
             self.en_passant_possible = self.en_passant_log[-1]
+            
+            # restore castling rights
+            self.castle_rights_log.pop()
+            self.current_castling_rights = self.castle_rights_log[-1]
+            
+            # reset checkmate and stalemate
+            self.checkmate = False
+            self.stalemate = False
 
     def updateCastleRights(self, move):
         if move.pieceMoved == "wK":
