@@ -2,8 +2,6 @@
 
 
 import pygame as p
-from pygame.examples.moveit import HEIGHT
-
 import Chess_engine, Chess_AI
 
 WIDTH = HEIGHT = 512
@@ -60,8 +58,8 @@ def main():
     running = True
     square_selected = () # No square is selected, keep track of the last click of the user (tuple: (r,c))
     player_clicks = [] # Keep track of player click (two tuple: [(6,4), (4,4)]
-    player_one =  True  
-    player_two = True
+    player_one = True  
+    player_two = False
     while running:
         human_turn = (gs.white_to_move and player_one) or (not gs.white_to_move and player_two) 
         for e in p.event.get():
@@ -115,6 +113,7 @@ def main():
                 if e.key == p.K_z and not game_over: #undo when 'z' is pressed
                     gs.undoMove()
                     moveMade = True
+                    game_over = False
                 if e.key == p.K_r: # reset the game when 'r' is pressed
                     gs = Chess_engine.GameState()
                     valid_moves = gs.getValidMoves()
@@ -122,14 +121,16 @@ def main():
                     player_clicks = []
                     moveMade = False
                     game_over = False
+
         #AI move finder
-        if  not game_over and not human_turn:
-            AI_move = Chess_AI.findRandomMoves(valid_moves)    
+        if not game_over and not human_turn:
+            AI_move = Chess_AI.findBestMove(gs, valid_moves)
+            if AI_move is None:
+                AI_move = Chess_AI.findRandomMoves(valid_moves)    
             gs.makeMove(AI_move)
             moveMade = True
 
         if moveMade:
-            # animated_move(gs.move_log[-1], screen, gs.board, clock)
             valid_moves = gs.getValidMoves()
             moveMade = False
 
@@ -205,27 +206,27 @@ def draw_pieces(screen,board):
             if piece != "--": # not an empty square
                 screen.blit(IMAGES[piece], p.Rect(c*SQ_SIZE, r*SQ_SIZE, SQ_SIZE, SQ_SIZE))
 
-def animated_move(move, screen, board, clock):
-    global colors
+# def animated_move(move, screen, board, clock):
+#     global colors
     
-    dR = move.endRow - move.startRow
-    dC = move.endCol - move.startCol
-    frames_per_square = 10 # frames to move one square
-    frame_count = (abs(dR) + abs(dC)) * frames_per_square
-    for frame in range(frame_count + 1):
-        r,c =(move.startRow + dR * frame / frame_count, move.startCol + dC * frame / frame_count)
-        draw_board(screen)
-        draw_pieces(screen, board)
-        #erase the piece moved from  its ending square
-        color = colors[(move.endRow + move.endCol) % 2]
-        end_square = p.Rect(move.endCol * SQ_SIZE, move.endRow * SQ_SIZE, SQ_SIZE, SQ_SIZE)
-        p.draw.rect(screen, color, end_square)
-        #draw the piece moved to its ending square
-        if move.pieceMoved != '--':
-            screen.blit(IMAGES[move.pieceMoved], end_square)  
-        screen.blit(IMAGES[move.pieceMoved], p.Rect(c*SQ_SIZE, r*SQ_SIZE, SQ_SIZE, SQ_SIZE))
-        p.display.flip()      
-        clock.tick(60)
+#     dR = move.endRow - move.startRow
+#     dC = move.endCol - move.startCol
+#     frames_per_square = 10 # frames to move one square
+#     frame_count = (abs(dR) + abs(dC)) * frames_per_square
+#     for frame in range(frame_count + 1):
+#         r,c =(move.startRow + dR * frame / frame_count, move.startCol + dC * frame / frame_count)
+#         draw_board(screen)
+#         draw_pieces(screen, board)
+#         #erase the piece moved from  its ending square
+#         color = colors[(move.endRow + move.endCol) % 2]
+#         end_square = p.Rect(move.endCol * SQ_SIZE, move.endRow * SQ_SIZE, SQ_SIZE, SQ_SIZE)
+#         p.draw.rect(screen, color, end_square)
+#         #draw the piece moved to its ending square
+#         if move.pieceMoved != '--':
+#             screen.blit(IMAGES[move.pieceMoved], end_square)  
+#         screen.blit(IMAGES[move.pieceMoved], p.Rect(c*SQ_SIZE, r*SQ_SIZE, SQ_SIZE, SQ_SIZE))
+#         p.display.flip()      
+#         clock.tick(60)
 
 def draw_text(screen, text):
     font = p.font.SysFont("Helvetica", 32, bold=True)
